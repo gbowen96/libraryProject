@@ -1,0 +1,1779 @@
+from tkinter import *
+from tkinter import filedialog
+from tkinter import messagebox
+import pymysql
+from datetime import datetime
+from datetime import timedelta
+from datetime import date
+
+class GUI:
+    def __init__(self, main, reg, create, search, exten, future, track, check, returnBook, lost, hold, damaged, books, freq, sub, staff, studFac):
+        self.ConnectDB()
+
+        #self.ExpiredHolds()
+        
+        self.logWin = main
+        self.LoginPage()
+
+        self.regWin = reg
+        self.regWin.withdraw()
+
+        self.createWin = create
+        self.createWin.withdraw()
+        
+        self.searchWin = search
+        self.searchWin.withdraw()
+
+        self.extenWin = exten
+        #self.RequestExtensionPage()
+        self.extenWin.withdraw()
+        
+        self.futureWin = future
+        #self.FutureHoldPage()
+        self.futureWin.withdraw()
+
+        self.trackWin = track
+        #self.TrackBookPage()
+        self.trackWin.withdraw()
+
+        self.checkWin = check
+        #self.BookCheckPage()
+        self.checkWin.withdraw()
+
+        self.returnWin = returnBook
+        #self.ReturnBookPage()
+        self.returnWin.withdraw()
+
+        self.lostWin = lost
+        #self.LostDamagedPage()
+        self.lostWin.withdraw()
+
+        self.holdWin = hold
+        self.holdWin.withdraw()
+
+        self.damagedReport = damaged
+        self.damagedReport.withdraw()
+
+
+        self.booksReport = books
+        #self.PopularBookReport()
+        self.booksReport.withdraw()
+        
+        self.freqReport = freq
+        #self.FrequentUserReport()
+        self.freqReport.withdraw()
+
+        self.subReport = sub
+        #self.PopularSubjectReport()
+        self.subReport.withdraw()
+
+        self.staffWin = staff
+        self.staffWin.withdraw()
+
+        self.studFacWin = studFac
+        self.studFacWin.withdraw()
+
+        self.damagedBooksLabels = []
+
+    def ConnectDB(self):
+        self.db = pymysql.connect( host='academic-mysql.cc.gatech.edu',
+                                   passwd='xzvugnim' , user='cs4400_Group_8'
+                                   , db='cs4400_Group_8')
+
+    def ExpiredHolds(self):
+        cursor = self.db.cursor()
+        
+        sqlCheck =  """SELECT ISBN, CopyNum
+                  FROM Copy NATURAL JOIN Issues
+                  WHERE CheckoutDate IS NULL AND DATEDIFF(day, HoldRequestDate, CURDATE()) = 4"""
+
+        cursor.execute(sqlCheck)
+        aList = []
+        for i in cursor:
+            aList.append(i)
+        
+        sqlUpdate = """UPDATE Copy
+                 SET OnHold = FALSE
+                 WHERE ISBN = %s AND CopyNum = %s"""
+
+        for i in range(len(aList)):
+            cursor.execute(sqlUpdate, (aList[i][0], aList[i][1]))
+
+        cursor.close()
+        self.db.commit()
+        
+        
+        
+    def LoginPage(self):
+        # Labels
+        Label(self.logWin, width=30 ,text="Login", bg="light blue", font="Helvetica 16 bold").grid(row=0, columnspan=3)
+        Label(self.logWin, text="Username: ").grid(row=2, column=0)
+        Label(self.logWin, text="Password: ").grid(row=3, column=0)
+        Label(self.logWin, text="").grid(row=4, column=1)
+
+        # Entries
+        self.userVar = StringVar()
+        self.userEntry = Entry(self.logWin, width=20, textvariable=self.userVar)
+        self.userEntry.grid(row=2, column=1)
+
+        self.pwVar = StringVar()
+        self.pwEntry = Entry(self.logWin, width=20, textvariable=self.pwVar)
+        self.pwEntry.grid(row=3, column=1)
+
+        # Buttons
+        self.loginB = Button(self.logWin, text="Login", width=15, relief=GROOVE, command=self.Login)
+        self.loginB.grid(row=5, column=1)
+
+        self.createAcc = Button(self.logWin, text="Create Account", command=self.CreateAccount, width=15, relief=GROOVE)
+        self.createAcc.grid(row=5, column=2)
+
+        self.logWin.update()
+        self.logWin.deiconify()
+
+    def NewUserPage(self):
+        # Labels
+        Label(self.regWin, bd=3, width=30,text="New User Registration", bg="light blue", font="Helvetica 16 bold").grid(row=0, columnspan=3)
+        Label(self.regWin, text="Username: ").grid(row=2, column=0, sticky=W)
+        Label(self.regWin, text="Password: ").grid(row=3, column=0, sticky=W)
+        Label(self.regWin, text="Confirm Password: ").grid(row=4, column=0, sticky=W)
+
+        # Entries
+        self.regUserVar = StringVar()
+        self.RegUserEntry = Entry(self.regWin, width=20, textvariable=self.regUserVar)
+        self.RegUserEntry.grid(row=2, column=1)
+
+        self.pwRegVar = StringVar()
+        self.pwRegEntry = Entry(self.regWin, width=20, textvariable=self.pwRegVar)
+        self.pwRegEntry.grid(row=3, column=1)
+
+        self.conRegVar = StringVar()
+        self.conEntry = Entry(self.regWin, width=20, textvariable=self.conRegVar)
+        self.conEntry.grid(row=4, column=1)
+
+        # Buttons
+        self.registerB = Button(self.regWin, text="Register", command=self.Register, width=15, relief=GROOVE)
+        self.registerB.grid(row=5, column=2)
+
+        self.regWin.update()
+        self.regWin.deiconify()
+
+    def CreateProfPage(self):
+        # Labels
+        Label(self.createWin, width=40 ,text="Create Profile", bg="light blue", font="Helvetica 16 bold").grid(row=0, columnspan=4)
+        Label(self.createWin, text="First Name ").grid(row=1, column=0, sticky=W)
+        Label(self.createWin, text="D.O.B ").grid(row=2, column=0, sticky=W)
+        Label(self.createWin, text="Email ").grid(row=3, column=0, sticky=W)
+        Label(self.createWin, text="Address ").grid(row=4, column=0, sticky=W)
+        Label(self.createWin, text="Last Name ").grid(row=1, column=2, sticky=W)
+        Label(self.createWin, text="Gender ").grid(row=2, column=2, sticky=W)
+        Label(self.createWin, text="Are you a faculty member? ").grid(row=3, column=2, sticky=W)
+        Label(self.createWin, text="Associated Department ").grid(row=4, column=2, sticky=W)
+
+        
+        # Entries/Data Entry
+        self.fnVar = StringVar()
+        self.firstName = Entry(self.createWin, width=20, textvariable=self.fnVar)
+        self.firstName.grid(row=1, column=1)
+
+        self.dobVar = StringVar()
+        self.dob = Entry(self.createWin, width=20, textvariable=self.dobVar)
+        self.dob.grid(row=2, column=1)
+        
+        self.emailVar = StringVar()
+        self.email = Entry(self.createWin, width=20, textvariable=self.emailVar)
+        self.email.grid(row=3, column=1)
+
+        self.addVar = StringVar()
+        self.address = Entry(self.createWin, width=20, textvariable=self.addVar)
+        self.address.grid(row=4, column=1)
+
+        self.lnVar = StringVar()
+        self.lastName = Entry(self.createWin, width=20, textvariable=self.lnVar)
+        self.lastName.grid(row=1, column=3)
+
+        self.genderVar = StringVar()
+        self.gender = Entry(self.createWin, width=20, textvariable=self.genderVar)
+        self.gender.grid(row=2, column=3)
+
+        self.intVar = IntVar()
+        self.faculty = Checkbutton(self.createWin, text="Yes", variable=self.intVar)
+        self.faculty.grid(row=3, column=3)
+
+        # Button
+        self.submitB = Button(self.createWin, text="Submit", command=self.Submit, width=15, relief=GROOVE)
+        self.submitB.grid(row=9, column=3)
+
+        self.createWin.update()
+        self.createWin.deiconify()
+
+
+    def SearchBooksPage(self):
+        # Labels
+        Label(self.searchWin, width=25, text="Search Books", bg="light blue", font="Helvetica 16 bold").grid(row=0, columnspan=3)      
+        Label(self.searchWin, text="ISBN ").grid(row=1, column=0, sticky=W)
+        Label(self.searchWin, text="Title ").grid(row=2, column=0, sticky=W)
+        Label(self.searchWin, text="Author ").grid(row=3, column=0, sticky=W)
+
+        
+        # Entries
+        self.isbnSearchVar = StringVar()
+        self.isbn = Entry(self.searchWin, width=20, textvariable=self.isbnSearchVar)
+        self.isbn.grid(row=1, column=1)
+
+        self.titleSearchVar = StringVar()
+        self.title = Entry(self.searchWin, width=20, textvariable=self.titleSearchVar)
+        self.title.grid(row=2, column=1)
+
+        self.authorSearchVar = StringVar()
+        self.author = Entry(self.searchWin, width=20, textvariable=self.authorSearchVar)
+        self.author.grid(row=3, column=1)
+
+        # Buttons
+        self.backB = Button(self.searchWin, width=10, command=self.Back, text="Back", relief=GROOVE)
+        self.backB.grid(row=4, column=0, sticky=W)
+
+        self.searchB = Button(self.searchWin, width=10, command=self.Search, text="Search", relief=GROOVE)
+        self.searchB.grid(row=4, column=1)
+
+        self.closeB = Button(self.searchWin, width=10, command=self.Close, text="Close", relief=GROOVE)
+        self.closeB.grid(row=4, column=2, sticky=W)
+
+        self.studFacWin.withdraw()
+        self.searchWin.update()
+        self.searchWin.deiconify()
+
+
+    def RequestExtensionPage(self):
+        self.studFacWin.withdraw()
+        self.extenWin.update()
+        self.extenWin.deiconify()
+        
+        self.topFrame = Frame(self.extenWin, highlightcolor="blue")
+        self.topFrame.grid(row=0)
+
+        self.botFrame = Frame(self.extenWin)
+        self.botFrame.grid(row=1)
+
+        # Labels - Top Frame
+        Label(self.topFrame, width=35, text="Request extension on a book", bg="light blue", font="Helvetica 16 bold").grid(row=0, columnspan=5)
+        Label(self.topFrame, text="Enter your issue_id").grid(row=1, column=0)
+        Label(self.topFrame, text="").grid(row=2)        
+
+        # Labels - Bottom Frame
+        Label(self.botFrame, text="Original Checkout Date").grid(row=0, column=0, sticky=W)
+        Label(self.botFrame, text="Current Extension Date").grid(row=1, column=0, sticky=W)
+        Label(self.botFrame, text="New Extension Date").grid(row=2, column=0, sticky=W)
+        Label(self.botFrame, text="Current Return Date").grid(row=1, column=2, sticky=W)
+        Label(self.botFrame, text="New Estimated Return Date").grid(row=2, column=2, sticky=W)
+        Label(self.botFrame, text="").grid(row=3, column=1, sticky=W)
+
+        # Entries - Top Frame
+        self.issueExten = StringVar()
+        self.issue = Entry(self.topFrame, width=20, textvariable=self.issueExten)
+        self.issue.grid(row=1, column=1)
+
+        # Entries - Bottom Frame
+        self.var1 = StringVar()
+        self.origCheck = Entry(self.botFrame, width=15, state=DISABLED, textvariable= self.var1)
+        self.origCheck.grid(row=0, column=1)
+
+        self.var2 = StringVar()
+        self.currExten = Entry(self.botFrame, width=15, state=DISABLED, textvariable= self.var2)
+        self.currExten.grid(row=1, column=1)
+
+        self.var3 = StringVar()
+        self.newExten = Entry(self.botFrame, width=15, state=DISABLED, textvariable= self.var3)
+        self.newExten.grid(row=2, column=1)
+
+        self.var4 = StringVar()
+        self.currRet = Entry(self.botFrame, width=15, state=DISABLED, textvariable= self.var4)
+        self.currRet.grid(row=1, column=3)
+
+        self.var5 = StringVar()
+        self.newEst = Entry(self.botFrame, width=15, state=DISABLED, textvariable= self.var5)
+        self.newEst.grid(row=2, column=3)
+
+        # Button
+        self.submitTop = Button(self.topFrame, width=10, text="Submit", relief=GROOVE, command=self.SubmitTop)
+        self.submitTop.grid(row=1, column=2)
+
+        self.submitBot = Button(self.botFrame, width=10, text="Submit", relief=GROOVE, command=self.SubmitBot)
+        self.submitBot.grid(row=4, column=3)
+
+    def HoldRequestPage(self):
+        self.searchWin.withdraw()
+        self.SearchBookHelper()
+
+        # Labels
+        Label(self.holdWin, width=40 ,text="Hold Request for a Book", bg="light blue", font="Helvetica 16 bold").grid(row=0, columnspan=5)
+        Label(self.holdWin, text="Books Available Summary", font="Helvetica 10 bold").grid(row=1, column=0)
+        Label(self.holdWin, text="Select").grid(row=2, column=0)
+        Label(self.holdWin, text="ISBN").grid(row=2, column=1)
+        Label(self.holdWin, text="Title of the Book").grid(row=2, column=2)
+        Label(self.holdWin, text="Edition").grid(row=2, column=3)
+        Label(self.holdWin, text="#copies available").grid(row=2, column=4)
+
+        Label(self.holdWin, text='').grid(row=len(self.booksInfo)+3, column=0)
+        Label(self.holdWin, text="Hold Request Date").grid(row=len(self.booksInfo)+4, column=0)
+        Label(self.holdWin, text="Estimated ReturnDate").grid(row=len(self.booksInfo)+4, column=2)
+        Label(self.holdWin, text="Books on Reserve", font="Helvetica 10 bold").grid(row=len(self.booksInfo)+6, column=0)
+        Label(self.holdWin, text='').grid(row=len(self.booksInfo)+6, column=0)
+
+        Label(self.holdWin, text="ISBN").grid(row=len(self.booksInfo)+7, column=1)
+        Label(self.holdWin, text="Title of the Book").grid(row=len(self.booksInfo)+7, column=2)
+        Label(self.holdWin, text="Edition").grid(row=len(self.booksInfo)+7, column=3)
+        Label(self.holdWin, text="#copies available").grid(row=len(self.booksInfo)+7, column=4)
+
+        
+        # Entries
+        self.holdReqVar = StringVar()
+        self.holdReqEntry = Entry(self.holdWin, state=DISABLED, textvariable=self.holdReqVar)
+        self.holdReqEntry.grid(row=len(self.booksInfo)+4, column=1)
+
+        self.estVar = StringVar()
+        self.estReqEntry = Entry(self.holdWin, state=DISABLED, textvariable=self.estVar)
+        self.estReqEntry.grid(row=len(self.booksInfo)+4, column=3)
+        
+        # Buttons
+        num = len(self.booksInfo) + 5
+        self.backHoldB = Button(self.holdWin, width=10, text="Back", command=self.BackHold)
+        self.backHoldB.grid(row=num, column=2)
+
+        self.submitHoldB = Button(self.holdWin, width=10,text="Submit", command=self.SubmitHold)
+        self.submitHoldB.grid(row=num, column=3)
+
+        self.closeHoldB = Button(self.holdWin, width=10,text="Close", command=self.Close)
+        self.closeHoldB.grid(row=num, column=4)
+
+        self.reqVar = StringVar()
+        row = 3
+        for i in range(len(self.booksInfo)):
+            hold = Radiobutton(self.holdWin, variable=self.reqVar, text='', value=self.booksInfo[i][0])
+            hold.grid(row=row+i,column=0)
+
+            Label(self.holdWin, text=str(self.booksInfo[i][0])).grid(row=row+i, column=1)
+            Label(self.holdWin, text=str(self.booksInfo[i][1])).grid(row=row+i, column=2)
+            Label(self.holdWin, text=str(self.booksInfo[i][2])).grid(row=row+i, column=3)
+            Label(self.holdWin, text=str(self.booksInfo[i][3])).grid(row=row+i, column=4)
+
+        row = 8
+        for i in range(len(self.resInfo)):
+            Label(self.holdWin, text=str(self.resInfo[i][0])).grid(row=row+i, column=1)
+            Label(self.holdWin, text=str(self.resInfo[i][1])).grid(row=row+i, column=2)
+            Label(self.holdWin, text=str(self.resInfo[i][2])).grid(row=row+i, column=3)
+            Label(self.holdWin, text=str(self.resInfo[i][3])).grid(row=row+i, column=4)
+
+        print(self.resInfo)
+
+        self.holdReqVar.set('2015-04-12')
+        self.estVar.set('2015-04-29')
+        
+        self.holdWin.update()
+        self.holdWin.deiconify()
+        
+    def FutureHoldPage(self):
+        self.studFacWin.withdraw()
+        self.futureWin.update()
+        self.futureWin.deiconify()
+
+        # Labels
+        Label(self.futureWin, width=30, text="Future Hold Request for a Book", bg="light blue", font="Helvetica 16 bold").grid(row=0, columnspan=5)
+        Label(self.futureWin, text="ISBN").grid(row=1, column=0, sticky=W)
+        Label(self.futureWin, text="").grid(row=2)
+
+        Label(self.futureWin, text="Copy Number").grid(row=3, column=0, sticky=W)
+        Label(self.futureWin, text="Expect Available Date").grid(row=4, column=0, sticky=W)
+        
+        
+        # Entries
+        self.isbnFutureVar = StringVar()
+        self.isbnFutureHold = Entry(self.futureWin, width=20, textvariable=self.isbnFutureVar)
+        self.isbnFutureHold.grid(row=1, column=1, sticky=W)
+
+        self.futureVar1 = IntVar()
+        self.copyNum = Entry(self.futureWin, width=10, state=DISABLED, textvariable=self.futureVar1)
+        self.copyNum.grid(row=3, column=1, sticky=W)
+
+        self.futureVar2 = StringVar()
+        self.expDate = Entry(self.futureWin, width=30, state=DISABLED, textvariable=self.futureVar2)
+        self.expDate.grid(row=4, column=1, sticky=W)
+
+        # Buttons
+        self.requestB = Button(self.futureWin, text="Request", width=10, relief=GROOVE, command=self.futureRequest)
+        self.requestB.grid(row=1, column=2)
+
+        self.okB = Button(self.futureWin, text="Ok", width=10, relief=GROOVE, command=self.futureOK)
+        self.okB.grid(row=5, column=2)
+
+    def futureRequest(self):
+        cursor = self.db.cursor()
+        sqlRead = """SELECT Copy.CopyNum, Issues.ExpectedReturnDate
+                     FROM Copy NATURAL JOIN Issues
+                     WHERE Copy.ISBN = %s AND Copy.FutureRequestor IS NULL
+                     ORDER BY Issues.ExpectedReturnDate ASC LIMIT 1"""
+        
+        cursor.execute(sqlRead, (self.isbnFutureVar.get()))
+        aList = []
+        for i in cursor:
+            aList.append(i)
+
+        if aList:
+            self.futureVar1.set(aList[0][0])
+            self.futureVar2.set(aList[0][1])
+
+        cursor.close()
+
+    def futureOK(self):
+        cursor = self.db.cursor()
+
+        sqlUpdate = """UPDATE Copy SET FutureRequestor = %s
+                       WHERE ISBN = %s AND CopyNum = %s"""
+
+        cursor.execute(sqlUpdate, (self.username, self.isbnFutureVar.get(), self.futureVar1.get()))
+        
+        cursor.close()
+        self.db.commit()
+
+            
+    def TrackBookPage(self):
+        self.studFacWin.withdraw()
+        self.trackWin.update()
+        self.trackWin.deiconify()
+        
+        # Labels
+        Label(self.trackWin, width=35 ,text="Track Book Location", bg="light blue", font="Helvetica 16 bold").grid(row=0, columnspan=5)
+        Label(self.trackWin, text="ISBN").grid(row=1, column=0, sticky=W)
+        Label(self.trackWin, text="").grid(row=2)
+
+        Label(self.trackWin, text="Floor Number").grid(row=3, column=0, sticky=W)
+        Label(self.trackWin, text="Aisle Number").grid(row=4, column=0, sticky=W)
+        Label(self.trackWin, text="Shelf Number").grid(row=3, column=2 ,sticky=W)
+        Label(self.trackWin, text="Subject").grid(row=4, column=2, sticky=W)
+        
+        
+        # Entries
+        self.isbnVar = StringVar()
+        self.isbnTrackBook = Entry(self.trackWin, width=20, textvariable=self.isbnVar)
+        self.isbnTrackBook.grid(row=1, column=1, sticky=W)
+
+        self.floorVar = StringVar()
+        self.floorNum = Entry(self.trackWin, width=20, state=DISABLED, textvariable=self.floorVar)
+        self.floorNum.grid(row=3, column=1, sticky=W)
+
+        self.aisleVar = StringVar()
+        self.aisleNum = Entry(self.trackWin, width=20, state=DISABLED, textvariable=self.aisleVar)
+        self.aisleNum.grid(row=4, column=1, sticky=W)
+
+        self.shelfVar = StringVar()
+        self.shelfNum = Entry(self.trackWin, width=20, state=DISABLED, textvariable=self.shelfVar)
+        self.shelfNum.grid(row=3, column=3, sticky=W)
+
+        self.subjectVar = StringVar()
+        self.subject = Entry(self.trackWin, width=20, state=DISABLED, textvariable=self.subjectVar)
+        self.subject.grid(row=4, column=3, sticky=W)
+
+        # Buttons
+        self.locateB = Button(self.trackWin, text="Locate", width=10, relief=GROOVE, command=self.Locate)
+        self.locateB.grid(row=1, column=3)
+        
+        
+        
+    def BookCheckPage(self):
+        self.staffWin.withdraw()
+        self.checkWin.update()
+        self.checkWin.deiconify()
+        
+        # Labels
+        Label(self.checkWin, width=35 ,text="Book Checkout", bg="light blue", font="Helvetica 16 bold").grid(row=0, columnspan=5)
+
+        Label(self.checkWin, text="Issue id").grid(row=1, column=0, sticky=W)
+        Label(self.checkWin, text="ISBN").grid(row=2, column=0, sticky=W)
+        Label(self.checkWin, text="Check out Date").grid(row=3, column=0, sticky=W)
+        Label(self.checkWin, text="User Name").grid(row=1, column=2, sticky=W)
+        Label(self.checkWin, text="Copy #").grid(row=2, column=2, sticky=W)
+        Label(self.checkWin, text="Estimated Return Date").grid(row=3, column=2, sticky=W)
+        Label(self.checkWin, text="").grid(row=4)
+
+        # Entries
+        self.issueCheckVar = StringVar()
+        self.issueCheck = Entry(self.checkWin, width=20, textvariable=self.issueCheckVar)
+        self.issueCheck.grid(row=1, column=1, sticky=W)
+
+        self.isbnCheckVar = StringVar()
+        self.isbnCheck = Entry(self.checkWin, width=20, state=DISABLED, textvariable=self.isbnCheckVar)
+        self.isbnCheck.grid(row=2, column=1, sticky=W)
+
+        self.checkDateVar = StringVar()
+        self.checkDate = Entry(self.checkWin, width=20, state=DISABLED, textvariable=self.checkDateVar)
+        self.checkDate.grid(row=3, column=1, sticky=W)
+
+        self.userNameVar = StringVar()
+        self.userNameCheck = Entry(self.checkWin, width=20, state=DISABLED, textvariable=self.userNameVar)
+        self.userNameCheck.grid(row=1, column=3, sticky=W)
+
+        self.copyNumVar = StringVar()
+        self.copyNumCheck = Entry(self.checkWin, width=20, state=DISABLED, textvariable=self.copyNumVar)
+        self.copyNumCheck.grid(row=2, column=3, sticky=W)
+
+        self.estReturnVar= StringVar()
+        self.estReturn = Entry(self.checkWin, width=20, state=DISABLED, textvariable=self.estReturnVar)
+        self.estReturn.grid(row=3, column=3, sticky=W)
+
+        # Buttons
+        self.checkB = Button(self.checkWin, text="Check", relief=GROOVE, width=15, command=self.Check)
+        self.checkB.grid(row=5, column=1)
+        
+        self.confirmB = Button(self.checkWin, text="Confirm", relief=GROOVE, width=15, command=self.Confirm)
+        self.confirmB.grid(row=5, column=2)
+
+    def ReturnBookPage(self):
+        self.staffWin.withdraw()
+        self.returnWin.update()
+        self.returnWin.deiconify()
+        
+        # Labels
+        Label(self.returnWin, width=40 ,text="Return Book", bg="light blue", font="Helvetica 16 bold").grid(row=0, columnspan=5)
+
+        Label(self.returnWin, text="Issue id").grid(row=1, column=0, sticky=W)
+        Label(self.returnWin, text="ISBN").grid(row=2, column=0, sticky=W)
+        Label(self.returnWin, text="Return in Damaged Condition").grid(row=3, column=0, sticky=W)
+        Label(self.returnWin, text="Copy Number").grid(row=1, column=2, sticky=W)
+        Label(self.returnWin, text="User Name").grid(row=2, column=2, sticky=W)
+
+        # Entries
+        self.issueReturnVar = StringVar()
+        self.issueReturn = Entry(self.returnWin, textvariable=self.issueReturnVar)
+        self.issueReturn.grid(row=1, column=1)
+
+        self.isbnReturnVar = StringVar()
+        self.isbnReturn = Entry(self.returnWin, width=20, state=DISABLED, textvariable=self.isbnReturnVar)
+        self.isbnReturn.grid(row=2, column=1)
+
+        self.returnVar = IntVar()
+        self.returnDamag = Checkbutton(self.returnWin, text="Yes", variable=self.returnVar)
+        self.returnDamag.grid(row=3, column=1)
+
+        self.cnReturnVar = StringVar()
+        self.copyNumReturn = Entry(self.returnWin, width=20, state=DISABLED, textvariable=self.cnReturnVar)
+        self.copyNumReturn.grid(row=1, column=3)
+
+        self.unReturnVar = StringVar()
+        self.userNameReturn = Entry(self.returnWin, width=20, state=DISABLED, textvariable=self.unReturnVar)
+        self.userNameReturn.grid(row=2, column=3)
+
+        # Button
+        self.returnB = Button(self.returnWin, width=15, text="Return", relief=GROOVE, command=self.Return)
+        self.returnB.grid(row=4, column=3)
+        
+        self.checkReturnB = Button(self.returnWin, width=15, text="Check", relief=GROOVE, command=self.CheckReturn)
+        self.checkReturnB.grid(row=4, column=2)
+        
+    def LostDamagedPage(self):
+        self.returnWin.withdraw()
+        self.lostWin.update()
+        self.lostWin.deiconify()
+        
+        # Labels
+        Label(self.lostWin, width=40 ,text="Lost/Damaged Book", bg="light blue", font="Helvetica 16 bold").grid(row=0, columnspan=5)
+
+        Label(self.lostWin, text="ISBN").grid(row=1, column=0, sticky=W)
+        Label(self.lostWin, text="Current Time").grid(row=2, column=0, sticky=W)
+        Label(self.lostWin, text="Book Copy #").grid(row=1, column=2, sticky=W)
+        Label(self.lostWin, text="Last User of the Book").grid(row=6, column=0, sticky=W)
+        Label(self.lostWin, text="Amount to be Charged").grid(row=7, column=0, sticky=W)
+        Label(self.lostWin, text="").grid(row=3)
+        Label(self.lostWin, text="").grid(row=5)
+
+        # Entries
+        self.isbnLostVar = StringVar()
+        self.isbnLost = Entry(self.lostWin, width=20, textvariable=self.isbnLostVar)
+        self.isbnLost.grid(row=1, column=1)
+
+        self.currTimeVar = StringVar()
+        self.currTime = Entry(self.lostWin, width=20, state=DISABLED, textvariable=self.currTimeVar)
+        self.currTime.grid(row=2, column=1)
+
+        self.bookLostVar = StringVar()
+        self.bookCopyNum = Entry(self.lostWin, width=20, textvariable=self.bookLostVar)
+        self.bookCopyNum.grid(row=1, column=3)
+        
+        self.lastVar = StringVar()
+        self.lastUser = Entry(self.lostWin, width=20, state=DISABLED, textvariable=self.lastVar)
+        self.lastUser.grid(row=6, column=1)
+
+        self.amountVar = StringVar()
+        self.amountCharged = Entry(self.lostWin, width=20, textvariable=self.amountVar)
+        self.amountCharged.grid(row=7, column=1)
+
+        # Buttons
+        self.lookB = Button(self.lostWin, text="Look for the last user", width=20, relief=GROOVE, command=self.Look)
+        self.lookB.grid(row=4, column=1)
+
+        self.submitLostB = Button(self.lostWin, text="Submit", width=15, relief=GROOVE, command=self.SubmitLost)
+        self.submitLostB.grid(row=8, column=2)
+
+        self.cancelLostB = Button(self.lostWin, text="Cancel", width=15, relief=GROOVE, command=self.Close)
+        self.cancelLostB.grid(row=8, column=3)
+
+        self.currTimeVar.set(self.curr)
+
+                  
+        
+    def DamagedBooksReport(self):
+        self.staffWin.withdraw()
+        self.damagedReport.update()
+        self.damagedReport.deiconify()
+
+        Label(self.damagedReport, width=40 ,text="Damaged Books Report", bg="light blue", font="Helvetica 16 bold").grid(row=0, columnspan=4)
+        
+        # Input
+        Label(self.damagedReport, text="Month", font="Helvetica 10").grid(row=1, column=0)
+        self.month = StringVar(self.damagedReport)
+        self.month.set("Jan") # default value
+        OptionMenu(self.damagedReport, self.month, 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec').grid(row=1, column=1)
+        
+        Label(self.damagedReport, text="Subject", font="Helvetica 10").grid(row=1, column=2)
+        self.sub1 = StringVar(self.damagedReport)
+        self.sub1.set("Biology") # default value
+        OptionMenu(self.damagedReport, self.sub1, 'Biology', 'Chemistry', 'Computer Science', 'Math').grid(row=1, column=3)
+        
+        Label(self.damagedReport, text="Subject", font="Helvetica 10").grid(row=2, column=2)
+        self.sub2 = StringVar(self.damagedReport)
+        self.sub2.set("Biology") # default value
+        OptionMenu(self.damagedReport, self.sub2, 'Biology', 'Chemistry', 'Computer Science', 'Math').grid(row=2, column=3)
+        
+        Label(self.damagedReport, text="Subject", font="Helvetica 10").grid(row=3, column=2)
+        self.sub3 = StringVar(self.damagedReport)
+        self.sub3.set("Biology") # default value
+        OptionMenu(self.damagedReport, self.sub3, 'Biology', 'Chemistry', 'Computer Science', 'Math').grid(row=3, column=3)
+
+        Button(self.damagedReport, text="Generate", font="Helvetica 10 bold", relief=GROOVE, command=self.generateDamagedReport).grid(row=4, column=2)
+        
+        # Table
+        Label(self.damagedReport, text="Month", font="Helvetica 10 bold").grid(row=5, column=0)
+        Label(self.damagedReport, text="Subject", font="Helvetica 10 bold").grid(row=5, column=1)
+        Label(self.damagedReport, text="Damaged Books", font="Helvetica 10 bold").grid(row=5, column=2)
+
+    def generateDamagedReport(self):
+      for label in self.damagedBooksLabels:
+        label.destroy()
+
+      l = Label(self.damagedReport, text=self.month.get())
+      l.grid(row=7, column=0)
+      self.damagedBooksLabels.append(l)
+
+      translateMonth = {'Jan':1, 'Feb':2, 'Mar':3, 'Apr':4, 'May':5, 'Jun':6, 'Jul':7, 'Aug':8, 'Sep':9, 'Oct':10, 'Nov':11, 'Dec':12}
+
+      sql= """SELECT MONTH( Copy.DamagedDate ) AS 
+              MONTH , Book.Subject AS Subject, COUNT( * ) AS DamagedBooks
+              FROM Copy
+              NATURAL JOIN Book
+              WHERE MONTH( Copy.DamagedDate ) = %s
+              AND (
+              Book.Subject = %s
+              OR Book.Subject = %s
+              OR Book.Subject = %s
+              )
+              GROUP BY Book.Subject"""
+
+      cursor = self.db.cursor()
+      cursor.execute(sql, (translateMonth[self.month.get()], self.sub1.get(), self.sub2.get(), self.sub3.get()))
+      aList = []
+      for i in cursor:
+          aList.append(i)
+
+      num = 6
+      for i in range(len(aList)):
+          l = Label(self.damagedReport, text=str(aList[i][1]))
+          l.grid(row=i+num, column=1)
+          self.damagedBooksLabels.append(l)
+          l = Label(self.damagedReport, text=str(aList[i][2]))
+          l.grid(row=i+num, column=2)
+          self.damagedBooksLabels.append(l)
+
+      cursor.close()
+
+    def PopularBooksReport(self):
+        self.staffWin.withdraw()
+        self.booksReport.update()
+        self.booksReport.deiconify()
+        
+        # Labels
+        Label(self.booksReport, width=40 ,text="Popular Books Report", bg="light blue", font="Helvetica 16 bold").grid(row=0, columnspan=3)
+        Label(self.booksReport, text="Month", font="Helvetica 10 bold").grid(row=1, column=0)
+        Label(self.booksReport, text="Title", font="Helvetica 10 bold").grid(row=1, column=1)
+        Label(self.booksReport, text="#checkouts", font="Helvetica 10 bold").grid(row=1, column=2)
+
+        Label(self.booksReport, text="Jan").grid(row=2, column=0)
+        Label(self.booksReport, text="Feb").grid(row=5, column=0)
+
+        
+        sqlJan= """SELECT Book.Title, COUNT(*) AS Checkouts
+                   FROM Issues
+                   NATURAL JOIN Book
+                   WHERE MONTH( Issues.CheckoutDate ) = 01
+                   GROUP BY ISBN
+                   ORDER BY COUNT( * ) DESC 
+                   LIMIT 3"""
+
+        sqlFeb = """SELECT Book.Title, COUNT(*) AS Checkouts
+                   FROM Issues
+                   NATURAL JOIN Book
+                   WHERE MONTH( Issues.CheckoutDate ) = 02
+                   GROUP BY ISBN
+                   ORDER BY COUNT( * ) DESC 
+                   LIMIT 3"""
+
+        cursor = self.db.cursor()
+        cursor.execute(sqlJan)
+        aList = []
+        for i in cursor:
+            aList.append(i)
+        num = 2
+        for i in range(len(aList)):
+            Label(self.booksReport, text=str(aList[i][0])).grid(row=i+num, column=1)
+            Label(self.booksReport, text=str(aList[i][1])).grid(row=i+num, column=2)
+
+        cursor.execute(sqlFeb)
+        bList = []
+        for i in cursor:
+            bList.append(i)
+
+        num += len(aList)
+        for i in range(len(bList)):
+            Label(self.booksReport, text=str(bList[i][0])).grid(row=i+num, column=1)
+            Label(self.booksReport, text=str(bList[i][1])).grid(row=i+num, column=2)
+                  
+        cursor.close()
+                  
+    def FrequentUsersReport(self):
+        self.staffWin.withdraw()
+        self.freqReport.update()
+        self.freqReport.deiconify()
+        
+        # Labels
+        Label(self.freqReport, width=40 ,text="Frequent Users Report", bg="light blue", font="Helvetica 16 bold").grid(row=0, columnspan=3)
+        Label(self.freqReport, text="Month", font="Helvetica 10 bold").grid(row=1, column=0)
+        Label(self.freqReport, text="User Name", font="Helvetica 10 bold").grid(row=1, column=1)
+        Label(self.freqReport, text="#checkouts", font="Helvetica 10 bold").grid(row=1, column=2)
+
+        Label(self.freqReport, text="Jan").grid(row=2, column=0)
+
+        sqlJan = """SELECT User.Username, COUNT(*) AS Checkouts
+                    FROM User NATURAL JOIN Issues
+                    WHERE MONTH(Issues.CheckoutDate) = 01
+                    GROUP BY User.Username
+                    HAVING COUNT(*) > 10
+                    ORDER BY COUNT(*) DESC LIMIT 5"""
+
+        sqlFeb = """SELECT User.Username, COUNT(*) AS Checkouts
+                    FROM User NATURAL JOIN Issues
+                    WHERE MONTH(Issues.CheckoutDate) = 02
+                    GROUP BY User.Username
+                    HAVING COUNT(*) > 10
+                    ORDER BY COUNT(*) DESC LIMIT 5"""
+
+        cursor = self.db.cursor()
+
+        cursor.execute(sqlJan)
+        aList=[]
+        for i in cursor:
+            aList.append(i)
+        num = 2
+        for i in range(len(aList)):
+            Label(self.freqReport, text=str(aList[i][0])).grid(row=i+num, column=1)
+            Label(self.freqReport, text=str(aList[i][1])).grid(row=i+num, column=2)
+
+        Label(self.freqReport, text="Feb").grid(row=i+num+1, column=0)
+
+        cursor.execute(sqlFeb)
+        bList=[]
+        for i in cursor:
+            bList.append(i)
+
+        num += len(aList)
+        for i in range(len(bList)):
+            Label(self.freqReport, text=str(bList[i][0])).grid(row=i+num, column=1)
+            Label(self.freqReport, text=str(bList[i][1])).grid(row=i+num, column=2)
+        
+        cursor.close()
+
+    def PopularSubjectReport(self):
+        self.staffWin.withdraw()
+        self.subReport.update()
+        self.subReport.deiconify()
+        
+        # Labels
+        Label(self.subReport, width=40 ,text="Popular Subject Report", bg="light blue", font="Helvetica 16 bold").grid(row=0, columnspan=3)
+        Label(self.subReport, text="Month", font="Helvetica 10 bold").grid(row=1, column=0)
+        Label(self.subReport, text="Top Subject", font="Helvetica 10 bold").grid(row=1, column=1)
+        Label(self.subReport, text="#checkouts", font="Helvetica 10 bold").grid(row=1, column=2)
+
+        Label(self.subReport, text="Jan").grid(row=2, column=0)
+        Label(self.subReport, text="Feb").grid(row=5, column=0)
+
+        sqlJan = """SELECT Book.Subject, COUNT(*) AS Checkouts
+                    FROM Book
+                    NATURAL JOIN Issues
+                    WHERE MONTH( Issues.CheckoutDate ) = 01
+                    GROUP BY Book.Subject
+                    ORDER BY COUNT(*) DESC
+                    LIMIT 3"""
+
+        sqlFeb = """SELECT Book.Subject, COUNT(*) AS Checkouts
+                    FROM Book
+                    NATURAL JOIN Issues
+                    WHERE MONTH( Issues.CheckoutDate ) = 02
+                    GROUP BY Book.Subject
+                    ORDER BY COUNT(*) DESC
+                    LIMIT 3"""
+
+        cursor = self.db.cursor()
+
+        cursor.execute(sqlJan)
+        aList=[]
+        for i in cursor:
+            aList.append(i)
+
+        num = 2
+        for i in range(len(aList)):
+            Label(self.subReport, text=str(aList[i][0])).grid(row=i+num, column=1)
+            Label(self.subReport, text=str(aList[i][1])).grid(row=i+num, column=2)
+
+        cursor.execute(sqlFeb)
+        bList=[]
+        for i in cursor:
+            bList.append(i)
+
+        num += len(aList)
+        for i in range(len(bList)):
+            Label(self.subReport, text=str(bList[i][0])).grid(row=i+num, column=1)
+            Label(self.subReport, text=str(bList[i][1])).grid(row=i+num, column=2)
+        
+        cursor.close()
+
+    def StaffPage(self):
+        
+        self.logWin.withdraw()
+        self.staffWin.update()
+        self.staffWin.deiconify()
+
+
+        Label(self.staffWin, width=25 ,text="Staff Page", bg="light blue", font="Helvetica 16 bold").pack()
+
+        self.checkStaff = Button(self.staffWin, text="Checkout", font="Helvetica 10 bold", relief=GROOVE,command=self.BookCheckPage)
+        self.checkStaff.pack()
+
+        self.returnStaff = Button(self.staffWin, text="Return", font="Helvetica 10 bold", relief=GROOVE, command=self.ReturnBookPage)
+        self.returnStaff.pack()
+
+        self.damStaff = Button(self.staffWin, text="Damaged Books Report", font="Helvetica 10 bold", relief=GROOVE, command=self.DamagedBooksReport)
+        self.damStaff.pack()
+
+        self.bookStaff = Button(self.staffWin, text="Popular Books Report", font="Helvetica 10 bold", relief=GROOVE, command=self.PopularBooksReport)
+        self.bookStaff.pack()
+
+        self.freqStaff = Button(self.staffWin, text="Frequent Users Report", font="Helvetica 10 bold", relief=GROOVE, command=self.FrequentUsersReport)
+        self.freqStaff.pack()
+
+        self.subStaff = Button(self.staffWin, text="Popular Subject Report", font="Helvetica 10 bold", relief=GROOVE, command=self.PopularSubjectReport)
+        self.subStaff.pack()
+
+    def Student_FacultyPage(self):
+        Label(self.studFacWin, width=25 ,text="Student/Faculty Page", bg="light blue", font="Helvetica 16 bold").pack()
+
+        self.studFacWin.update()
+        self.studFacWin.deiconify()
+        
+        # Buttons
+        self.searchNav = Button(self.studFacWin, text="Search Book", font="Helvetica 10 bold", relief=GROOVE, command=self.SearchBooksPage)
+        self.searchNav.pack()
+
+        self.extenNav = Button(self.studFacWin, text="Request Extension", font="Helvetica 10 bold", relief=GROOVE, command=self.RequestExtensionPage)
+        self.extenNav.pack()
+
+        self.trackNav = Button(self.studFacWin, text="Track Book Location", font="Helvetica 10 bold", relief=GROOVE, command=self.TrackBookPage)
+        self.trackNav.pack()
+        
+# Navigation Functions-----------------------------------------------------------------------------------------------------------------------------------------------
+
+    def Login(self):
+        cursor = self.db.cursor()
+
+        userName = self.userVar.get()
+        passwd = self.pwVar.get()
+
+        # Check if Student/Faculty or Staff
+
+        sqlTypeCheck = " SELECT Type FROM User WHERE Username=%s"
+        cursor.execute(sqlTypeCheck, (userName))
+
+        typeList = []
+        for i in cursor:
+            typeList.append(i)
+
+        self.type = typeList[0][0]
+
+        if self.type == 'sta':
+            sqlUserCheck = " SELECT Username FROM User WHERE Username=%s AND Password=%s "
+            cursor.execute(sqlUserCheck, (userName, passwd))
+
+            aList = []
+            for i in cursor:
+                aList.append(i)
+
+            if len(aList) == 0:
+                messagebox.showwarning("Error!", "Wrong Username/Password combination!")
+                self.LoginPage()
+
+            else:
+                self.StaffPage()
+            
+        else:
+            sqlUserCheck = " SELECT Username FROM User WHERE Username=%s AND Password=%s "
+            cursor.execute(sqlUserCheck, (userName, passwd))
+
+            aList = []
+            for i in cursor:
+                aList.append(i)
+
+            if len(aList) == 0:
+                messagebox.showwarning("Error!", "Wrong Username/Password combination!")
+                self.LoginPage()
+
+            else:
+                self.logWin.withdraw()
+                self.Student_FacultyPage()
+
+    def SearchBookHelper(self):
+        self.isbnEntered = self.isbnSearchVar.get()
+        self.titleEntered = self.titleSearchVar.get()
+        self.authorEntered = self.authorSearchVar.get()
+
+        print(self.isbnEntered)
+        print(self.titleEntered)
+        print(self.authorEntered)
+
+        cursor = self.db.cursor()
+
+        if self.isbnEntered != '':
+        
+            sql = """SELECT Book.ISBN, Book.Title, Book.Edition, COUNT(*) AS Available
+                     FROM Book NATURAL JOIN Copy
+                     WHERE Book.ISBN LIKE %s AND Copy.CheckedOut = FALSE AND Copy.OnHold = FALSE AND Copy.DamagedDate IS NULL AND Book.OnReserve = FALSE
+                     GROUP BY Book.ISBN"""
+
+            cursor.execute(sql, ('%' + self.isbnEntered + '%'))
+            
+            self.booksInfo = []
+            for i in cursor:
+                self.booksInfo.append(i)
+
+            print(self.booksInfo)
+
+            cursor.close()
+            
+
+        elif self.titleEntered != '':
+            sql = """SELECT Book.ISBN, Book.Title, Book.Edition, COUNT(*) AS Available
+                     FROM Book NATURAL JOIN Copy
+                     WHERE Book.Title LIKE %s AND Copy.CheckedOut = FALSE AND Copy.OnHold = FALSE AND Copy.DamagedDate IS NULL AND Book.OnReserve = FALSE
+                     GROUP BY Book.ISBN"""
+
+            cursor.execute(sql, ('%' + self.titleEntered + '%'))
+            
+            self.booksInfo = []
+            for i in cursor:
+                self.booksInfo.append(i)
+
+            print(self.booksInfo)
+            cursor.close()
+
+
+        elif self.authorEntered != '':
+            sql = """SELECT Book.ISBN, Book.Title, Book.Edition, COUNT(*) AS Available
+             FROM Book NATURAL JOIN Copy NATURAL JOIN Author
+             WHERE Author.AuthorName LIKE %s AND Copy.CheckedOut = FALSE AND Copy.OnHold = FALSE AND Copy.DamagedDate IS NULL AND Book.OnReserve = FALSE
+             GROUP BY Book.ISBN"""
+
+            cursor.execute(sql, ('%' + self.authorEntered + '%'))
+            
+            self.booksInfo = []
+            for i in cursor:
+                self.booksInfo.append(i)
+
+            print(self.booksInfo)
+            cursor.close()
+
+    def CreateAccount(self):
+        self.logWin.withdraw()
+        self.NewUserPage()
+
+
+    def Register(self):
+        cursor = self.db.cursor()
+
+        userName = self.regUserVar.get()
+        passwd = self.pwRegVar.get()
+        conf = self.conRegVar.get()
+
+        sqlCheck = " SELECT Username FROM User WHERE Username=%s "
+        cursor.execute(sqlCheck, (userName))
+
+        aList = []
+        for i in cursor:
+            aList.append(i)
+
+        if len(aList) == 0 or passwd != conf:
+            self.regUserVar.set('')
+            self.pwRegVar.set('')
+            self.conRegVar.set('')
+            cursor.close()
+            self.NewUserPage()
+
+        else:
+            sqlInsert = """INSERT INTO User (Username, Password, Type)
+                    VALUES (%s, %s, %s)"""
+
+            cursor.execute(sql, (userName, passwd, conf))
+
+            cursor.close()
+            self.db.commit()
+
+        self.regWin.withdraw()
+        self.CreateProfPage()
+
+    def Submit(self):
+        answer = self.intVar.get()
+        cursor = self.db.cursor()
+
+        self.fnGet = self.fnVar.get()
+        self.lnGet = self.lnVar.get()
+        self.nameGet = self.fnGet + ' ' + self.lnGet
+        
+        self.dobGet = self.dobVar.get()
+        self.emailGet = self.emailVar.get()
+        self.addressGet = self.addVar.get()
+        self.genderGet = self.genderVar.get()
+        self.userGet = self.regUserVar.get()
+        
+        if answer == 1:
+            self.var = IntVar()
+            self.depList = [("Math",0), ("Science",1), ("Language Arts",2), ("Engineering",3), ("Art",4)]
+
+            num=4
+            i=0
+            for text, value in self.depList:
+                dep = Radiobutton(self.createWin, text=text, variable=self.var, value=value)
+                dep.grid(row=num+i,column=3, sticky=W)
+                i = i + 1
+
+            self.CreateProfileFac()
+            
+        else:
+            sql = """INSERT INTO Student_Faculty (Username, Name, Dob, Email, Address, Gender)
+                    VALUES  (%s, %s, %s, %s, %s, %s)"""
+            
+            cursor.execute(sql, (self.userGet, self.nameGet, self.dobGet, self.emailGet, self.addressGet, self.genderGet))
+
+            cursor.close()
+            self.db.commit()
+
+        self.createWin.withdraw()   
+        self.logWin.update()
+        self.logWin.deiconify()
+
+    def CreateProfileFac(self):
+        cursor = self.db.cursor()
+        
+        var = self.var.get()
+        for one in range(len(self.depList)):
+            for two in range(2):
+                if self.depList[one][two] == var:
+                    depart = self.depList[one][two]
+                    
+        sql = """INSERT INTO Student_Faculty (Username, Name, Dob, Email, Address, Gender, Department)
+                VALUES  (%s, %s, %s, %s, %s, %s, %s)"""
+        
+        cursor.execute(sql, (self.userGet, self.nameGet, self.dobGet, self.emailGet, self.addressGet, self.genderGet, depart))
+
+        cursor.close()
+        self.db.commit()
+
+        
+    def Back(self):
+        self.searchWin.withdraw()
+        self.logWin.update()
+        self.logWin.deiconify()
+
+    def BackHold(self):
+        self.holdWin.withdraw()
+        self.studFacWin.update()
+        self.studFacWin.deiconify()
+
+    def Search(self):
+        self.isbnEntered = self.isbnSearchVar.get()
+        self.titleEntered = self.titleSearchVar.get()
+        self.authorEntered = self.authorSearchVar.get()
+        cursor = self.db.cursor()
+
+        if self.isbnEntered != '':
+        
+            sql = """SELECT Book.ISBN, Book.Title, Book.Edition, COUNT(*) AS Available
+                     FROM Book NATURAL JOIN Copy
+                     WHERE Book.ISBN LIKE %s AND Copy.DamagedDate IS NULL AND Book.OnReserve = TRUE
+                     GROUP BY Book.ISBN"""
+
+            cursor.execute(sql, ('%' + self.isbnEntered + '%'))
+            
+            self.resInfo = []
+            for i in cursor:
+                self.resInfo.append(i)
+
+            print(self.resInfo)
+
+            cursor.close()
+            
+
+        elif self.titleEntered != '':
+            sql = """SELECT Book.ISBN, Book.Title, Book.Edition, COUNT(*) AS Available
+                     FROM Book NATURAL JOIN Copy
+                     WHERE Book.Title LIKE %s AND Copy.DamagedDate IS NULL AND Book.OnReserve = TRUE
+                     GROUP BY Book.ISBN"""
+
+            cursor.execute(sql, ('%' + self.titleEntered + '%'))
+            
+            self.resInfo = []
+            for i in cursor:
+                self.resInfo.append(i)
+
+            print(self.resInfo)
+            cursor.close()
+
+        elif self.authorEntered != '':
+            sql = """SELECT Book.ISBN, Book.Title, Book.Edition, COUNT(*) AS Available
+                     FROM Book NATURAL JOIN Copy NATURAL JOIN Author
+                     WHERE Author.AuthorName LIKE %s AND Copy.DamagedDate IS NULL AND Book.OnReserve = TRUE
+                     GROUP BY Book.ISBN"""
+
+            cursor.execute(sql, ('%' + self.authorEntered + '%'))
+            
+            self.resInfo = []
+            for i in cursor:
+                self.resInfo.append(i)
+
+            print(self.resInfo)
+            cursor.close()
+            
+        self.HoldRequestPage()
+        
+    def Close(self):
+        self.logWin.destroy()
+
+    def SubmitHold(self):
+        # Check to see if User has existing Issue ID
+
+        userName = self.userVar.get()
+        copyNum = str(self.booksInfo[0][3])
+        isbn = self.reqVar.get()
+              
+        cursor = self.db.cursor()
+        sqlIssueCheck = """SELECT * FROM Issues
+                           WHERE Issues.Username = %s AND Issues.ISBN = %s AND Issues.CopyNum = %s AND Issues.CheckoutDate IS NULL"""
+
+        cursor.execute(sqlIssueCheck, (userName, isbn, copyNum))
+
+        aList = []
+        for i in cursor:
+            aList.append(i)
+
+        if len(aList) == 0:
+            # Getting Current Date and then adding 17 days to get Est. Return Date
+            newDate = '2015-04-12'
+            estReturn = '2015-04-29'
+
+            # Getting New Issue_ID
+            sqlNewIssue = "SELECT MAX(IssueID) AS LastIssueID FROM Issues"
+
+            cursor.execute(sqlNewIssue)
+            bList = []
+            for i in cursor:
+                bList.append(i)
+
+            issueID = int(bList[0][0]) + 1
+            issueID = str(issueID)
+            print(issueID)
+
+            # Inserting into DB, but keeping CheckoutDate NULL until the book is actually checked out
+            sqlAddIssue = """INSERT INTO Issues(IssueID, Username, ISBN, CopyNum, HoldRequestDate, ExpectedReturnDate)
+                            VALUES (%s, %s, %s, %s, %s, %s)"""
+        
+            cursor.execute(sqlAddIssue, (issueID, userName, isbn, copyNum, newDate, estReturn))
+
+            sqlUpdate = """UPDATE Copy
+                           SET Copy.OnHold = TRUE
+                           WHERE ISBN=%s AND CopyNum=%s"""
+
+            cursor.execute(sqlUpdate, (isbn, copyNum))
+            
+            cursor.close()
+            self.db.commit()
+
+    def Locate(self):
+            cursor = self.db.cursor()
+            isbn = self.isbnVar.get()
+            
+            sql = """SELECT Shelf.ShelfNum, Shelf.FloorNum, Shelf.AisleNum, Book.Subject
+                    FROM Book NATURAL JOIN Shelf
+                    WHERE Book.ISBN = %s"""
+
+            cursor.execute(sql, (isbn) )
+            aList = []
+            for i in cursor:
+                aList.append(i)
+
+            if aList:
+              for i in range(len(aList[0])):
+                  if i == 0:
+                      self.shelfVar.set(str(aList[0][i]))
+
+                  elif i == 1:
+                      self.floorVar.set(str(aList[0][i]))
+
+                  elif i == 2:
+                      self.aisleVar.set(str(aList[0][i]))
+
+                  elif i == 3:
+                      self.subjectVar.set(str(aList[0][i]))
+            else:
+              self.shelfVar.set('')
+              self.floorVar.set('')
+              self.aisleVar.set('')
+              self.subjectVar.set('')
+
+    def Check(self):
+        issueID = self.issueCheckVar.get()
+        userName = self.userNameVar.get()
+        cursor = self.db.cursor()
+        
+# When the Staff knows that the user does NOT have an issue_ID (NO PREV HOLD)
+
+        if issueID == '':
+             self.issueCheck.config(state=DISABLED)
+             self.userNameCheck.config(state=NORMAL)
+             self.isbnCheck.config(state=NORMAL)
+             self.copyNumCheck.config(state=NORMAL)
+
+# When the Staff knows that the user does have an issue_ID
+
+        else:
+            # Check if HoldRequestDate is over 3 days
+
+            sqlHold = "SELECT HoldRequestDate FROM Issues WHERE IssueID=%s"
+            cursor.execute(sqlHold, (issueID))
+
+            holdDate =[]
+            for i in cursor:
+                holdDate.append(i)
+
+            holdDate = holdDate[0][0]
+
+            if holdDate != None:
+
+                sqlHoldAdd = "SELECT TIMESTAMPADD(Day, 3, %s)"
+                cursor.execute(sqlHoldAdd, (holdDate))
+
+                newHold = []
+                for i in cursor:
+                    newHold.append(i)
+
+                newHold = str(newHold[0][0])
+
+                if newHold < '2015-04-12':
+                    messagebox.showwarning("Error!", "The hold has been dropped!")
+
+
+            else:
+                # Since there is a hold request, now populate the fields.
+                sqlPop = """SELECT Issues.UserName, Issues.ISBN, Issues.CopyNum, Issues.ExpectedReturnDate
+                            FROM Issues WHERE IssueID = %s"""
+
+                cursor.execute(sqlPop, (issueID))
+                cList = []
+                for i in cursor:
+                    cList.append(i)
+
+                currDate = '2015-04-12'
+                estReturn = '2015-04-26'
+    
+
+                self.isbnCheckVar.set(str(cList[0][1]))
+                self.checkDateVar.set(currDate)
+                self.userNameVar.set(str(cList[0][0]))
+                self.copyNumVar.set(str(cList[0][2]))
+                self.estReturnVar.set(estReturn)
+
+                # Update the Copy Table and insert Checkout Date
+
+                sqlUpdate = """UPDATE Copy
+                               SET Copy.CheckedOut = 1, Copy.OnHold = 0
+                               WHERE Copy.ISBN = %s AND Copy.CopyNum = %s"""
+
+                cursor.execute(sqlUpdate, (str(cList[0][1]), str(cList[0][2])))
+
+                sqlAdd = "SELECT TIMESTAMPADD(Day, 14, %s)"
+                cursor.execute(sqlAdd, (currDate))
+
+                date = []
+                for i in cursor:
+                    date.append(i)
+
+                date = date[0][0]
+
+                sqlUpdateNew = """UDPDATE Issues
+                                  SET EstimatedReturnDate =%s
+                                  WHERE IssueID=%s"""
+
+                cursor.execute(sqlUpdateNew, (date, issueID))
+                cursor.close()
+                self.db.commit()
+                
+                
+    def Confirm(self):
+        userName = self.userNameVar.get()
+        copyNum = self.copyNumVar.get()
+        isbn = self.isbnCheckVar.get()
+
+        cursor = self.db.cursor()
+        
+
+        # Getting Current Date and then adding 14 days to get Est. Return Date
+        currDate = '2015-04-12'
+        returnDate = '2015-04-26'
+
+        # Getting New Issue_ID
+        sqlNewIssue = "SELECT MAX(IssueID) AS LastIssueID FROM Issues"
+
+        cursor.execute(sqlNewIssue)
+        bList = []
+        for i in cursor:
+            bList.append(i)
+
+        issueID = int(bList[0][0]) + 1
+
+        # Inserting into DB
+        sqlAddIssue = """INSERT INTO Issues(IssueID, Username, ISBN, CopyNum, CheckoutDate, ExpectedReturnDate)
+                        VALUES (%s, %s, %s, %s, %s, %s)"""
+    
+        cursor.execute(sqlAddIssue, (issueID, userName, isbn, copyNum, currDate, returnDate))
+        cursor.close()
+        self.db.commit()
+
+        # Inserting into Entry Fields and also disabling them
+
+        self.issueCheck.config(state=DISABLED)
+        self.userNameCheck.config(state=DISABLED)
+        self.isbnCheck.config(state=DISABLED)
+        self.copyNumCheck.config(state=DISABLED)
+
+        self.issueCheckVar.set(str(issueID))
+        self.isbnCheckVar.set(isbn)
+        self.checkDateVar.set(currDate)
+        self.userNameVar.set(userName)
+        self.copyNumVar.set(copyNum)
+        self.estReturnVar.set(returnDate)
+        
+    def CheckReturn(self):
+        self.issueID = self.issueReturnVar.get()
+
+        cursor = self.db.cursor()
+
+        sqlFind = """SELECT ISBN, CopyNum, Username
+                     FROM Issues
+                     WHERE IssueID = %s AND ReturnDate IS NULL"""
+
+        cursor.execute(sqlFind, (self.issueID))
+        aList = []
+        for i in cursor:
+            aList.append(i)
+
+        self.isbnReturn = aList[0][0]
+        self.copyNumReturn = aList[0][1]
+        userName = aList[0][2]
+        returnDate = '2015-04-12'
+        currDate = '2015-04-12'
+
+        self.isbnReturnVar.set(str(self.isbnReturn))
+        self.cnReturnVar.set(str(self.copyNumReturn))
+        self.unReturnVar.set(str(userName))
+    
+##
+    def Return(self):
+        num = self.returnVar.get()
+
+        self.curr = datetime.now()
+        self.curr = str(self.curr)
+
+
+        if num == 0:
+            self.issueID = self.issueReturnVar.get()
+
+            cursor = self.db.cursor()
+
+            sqlFind = """SELECT ISBN, CopyNum, Username
+                         FROM Issues
+                         WHERE IssueID = %s AND ReturnDate IS NULL"""
+
+            cursor.execute(sqlFind, (self.issueID))
+            aList = []
+            for i in cursor:
+                aList.append(i)
+
+            isbn = aList[0][0]
+            copyNum = aList[0][1]
+            userName = aList[0][2]
+            returnDate = '2015-04-12'
+            currDate = '2015-04-12'
+
+            sqlUpdateDate = """UPDATE Issues 
+                               SET ReturnDate = %s
+                               WHERE IssueID = %s"""
+            
+            cursor.execute(sqlUpdateDate, (returnDate, self.issueID))
+
+            sqlUpdateCopy = """UPDATE Copy
+                               SET Copy.CheckedOut = 0
+                               WHERE ISBN = %s AND CopyNum = %s"""
+
+            cursor.execute(sqlUpdateCopy, (isbn, copyNum))      
+            
+            sqlDebarred = """UPDATE Student_Faculty
+                             SET Debarred = TRUE
+                             WHERE Username = %s AND Penalty > 100"""
+
+            cursor.execute(sqlDebarred, (userName))
+
+            cursor.close()
+            self.db.commit()
+            self.Close()
+
+        elif num == 1:
+            self.LostDamagedPage()
+
+    def Look(self):
+        isbn = self.isbnLostVar.get()
+        bookCopyNum = self.bookLostVar.get()
+
+        cursor = self.db.cursor()
+
+        sql = """SELECT Student_Faculty.Username
+                FROM User NATURAL JOIN Student_Faculty NATURAL JOIN Issues
+                WHERE Issues.ISBN = %s AND Issues.CopyNum = %s AND ReturnDate IS NULL"""        
+
+        cursor.execute(sql, (isbn, str(bookCopyNum)))
+
+        aList = []
+        for i in cursor:
+            aList.append(i)
+
+        print(aList)
+
+        self.lostUser = aList[0][0]
+
+        self.lastVar.set(self.lostUser)
+
+    def SubmitLost(self):
+        num = self.returnVar.get()
+
+        amount = self.amountVar.get()
+
+        cursor = self.db.cursor()
+
+        currDate = '2015-04-12'
+
+        if num == 1:
+            sqlPenalty = """UPDATE Student_Faculty NATURAL JOIN Issues
+                            SET penalty= penalty + DATEDIFF(%s, Issues.ExpectedReturnDate) * 0.5
+                            WHERE Student_Faculty.Username = %s AND IssueID = %s"""
+
+            cursor.execute(sqlPenalty, (currDate, self.lostUser, self.issueID))
+            
+            cursor.close()
+            self.db.commit()
+            
+        else:
+
+            sql = """UPDATE Copy 
+                   SET DamagedDate = %s
+                   WHERE ISBN = %s AND CopyNum = %s"""
+            cursor.execute(sql, (currDate, self.isbnReturn, self.copyNumReturn))
+            
+            sqlPenalty = """UPDATE Student_Faculty NATURAL JOIN Issues
+                            SET penalty= penalty + DATEDIFF(%s, Issues.ExpectedReturnDate) * 0.5
+                            WHERE Student_Faculty.Username = %s AND IssueID = %s"""
+
+            cursor.execute(sqlPenalty, (currDate, self.lostUser, self.issueID))
+            
+            cursor.close()
+            self.db.commit()
+    
+        
+    def SubmitTop(self):
+        issueID = self.issueExten.get()
+
+        cursor = self.db.cursor()
+        newExten = '2015-04-12'
+
+        sqlCurr = "SELECT CheckoutDate, ExtensionRequestDate, ExpectedReturnDate FROM Issues WHERE IssueID=%s"
+        cursor.execute(sqlCurr, (issueID))
+        aList = []
+        for i in cursor:
+            aList.append(i)
+
+        checkoutDate = aList[0][0]
+        currExten = aList[0][1]
+        currReturn = aList[0][2]
+
+        sqlAdd = "SELECT TIMESTAMPADD(Day, 28, %s)"
+        cursor.execute(sqlAdd, (checkoutDate))
+
+        maxDate = []
+        for i in cursor:
+            maxDate.append(i)
+
+        maxDate = maxDate[0][0]
+        self.maxDate = str(maxDate)
+
+        if currExten == None:
+            currExten = checkoutDate
+
+        sqlAdd = "SELECT TIMESTAMPADD(Day, 14, %s)"
+        cursor.execute(sqlAdd, (newExten))
+        compare = []
+        for i in cursor:
+            compare.append(i)
+
+        compare = str(compare[0][0])
+
+
+        if compare < self.maxDate:
+            estReturn = str(compare)
+
+        else:
+            estReturn = maxDate
+
+        self.var1.set(str(checkoutDate))
+        self.var2.set(str(currExten))
+        self.var3.set(str(newExten))
+        self.var4.set(str(currReturn))
+        self.var5.set(str(estReturn))
+
+        
+
+        
+
+            
+        
+        
+    def SubmitBot(self):
+        issueID = self.issueExten.get()
+        cursor = self.db.cursor()
+        # Check to see if type is student or faculty
+        
+        if self.type == 'stu':
+            # If copy does not have Future Requestor then check the Number of Extensions
+            maxDate = 28
+            
+            sql = "SELECT NumExtensions FROM Issues WHERE IssueID=%s"
+            cursor.execute(sql, (issueID))
+
+            numExtensions = []
+            for i in cursor:
+                numExtensions.append(i)
+
+            numExtensions = numExtensions[0][0]
+
+            sqlHold = "SELECT Copy.OnHold FROM Issues NATURAL JOIN Copy WHERE IssueID=%s"
+            cursor.execute(sqlHold, (issueID))
+
+            onHold = []
+            for i in cursor:
+                onHold.append(i)
+
+            onHold = onHold[0][0]
+
+            if numExtensions < 2 and onHold == 0:
+                # Extract Info about checkout date and expected return date
+                sqlCheckDate = "SELECT CheckoutDate FROM Issues WHERE IssueID = %s"
+                cursor.execute(sqlCheckDate, (issueID))
+
+                dates = []
+                for i in cursor:
+                    dates.append(i)
+
+                checkoutDate = dates[0][0]
+
+                sqlAdd = "SELECT TIMESTAMPADD(Day, 28, %s)"
+                cursor.execute(sqlAdd, (checkoutDate))
+
+                maxDate = []
+                for i in cursor:
+                    maxDate.append(i)
+
+                maxDate = maxDate[0][0]
+                self.maxDate = str(maxDate)
+
+                if maxDate > '2015-04-26':
+                    sqlNew = """UPDATE Issues
+                                SET extensionrequestdate = %s,
+                                numextensions = numextensions + 1, expectedreturndate = TIMESTAMPADD(Day, 14, %s)
+                                WHERE Issues.issueId = %s"""
+
+                    cursor.execute(sqlNew, ('2015-04-12', '2015-04-12', issueID))
+
+                    cursor.close()
+                    self.db.commit()
+
+                else:
+                    sqlNew = """UPDATE Issues
+                                SET extensionrequestdate = %s
+                                numextensions = numextensions + 1, expectedreturndate = TIMESTAMPADD(Day, 28, %s)
+                                WHERE  Issues.issueId = %s"""
+
+                    cursor.execute(sqlNew, ('2015-04-12', self.maxDate, issueID))
+
+                    cursor.close()
+                    self.db.commit()
+
+            else:
+                messagebox.showwarning("Error!", "Cannot place an Extension!")
+                
+        elif self.type == 'fac':
+            # If copy does not have Future Requestor then check the Number of Extensions
+            maxDate = 56
+            
+            sql = "SELECT NumExtensions FROM Issues WHERE IssueID=%s"
+            cursor.execute(sql, (issueID))
+
+            numExtensions = []
+            for i in cursor:
+                numExtensions.append(i)
+
+            numExtensions = numExtensions[0][0]
+
+            sqlHold = "SELECT Copy.OnHold FROM Issues NATURAL JOIN Copy WHERE IssueID=%s"
+            cursor.execute(sqlHold, (issueID))
+
+            onHold = []
+            for i in cursor:
+                onHold.append(i)
+
+            onHold = onHold[0][0]
+
+            if numExtensions < 5 and onHold == 0:
+                # Extract Info about checkout date and expected return date
+                sqlCheckDate = "SELECT CheckoutDate FROM Issues WHERE IssueID = %s"
+                cursor.execute(sqlCheckDate, (issueID))
+
+                dates = []
+                for i in cursor:
+                    dates.append(i)
+
+                checkoutDate = dates[0][0]
+
+                sqlAdd = "SELECT TIMESTAMPADD(Day, 56, %s)"
+                cursor.execute(sqlAdd, (checkoutDate))
+
+                maxDate = []
+                for i in cursor:
+                    maxDate.append(i)
+
+                maxDate = maxDate[0][0]
+                maxDate = str(maxDate)
+
+                if maxDate > '2015-06-07':
+                    sqlNew = """UPDATE Issues
+                                SET extensionrequestdate = %s,
+                                numextensions = numextensions + 1, expectedreturndate = TIMESTAMPADD(Day, 14, %s)
+                                WHERE Issues.issueId = %s"""
+
+                    cursor.execute(sqlNew, ('2015-04-12', '2015-04-12', issueID))
+
+                    cursor.close()
+                    self.db.commit()
+
+                else:
+                    sqlNew = """UPDATE Issues
+                                SET extensionrequestdate = %s
+                                numextensions = numextensions + 1, expectedreturndate = TIMESTAMPADD(Day, 28, %s)
+                                WHERE  Issues.issueId = %s"""
+
+                    cursor.execute(sqlNew, ('2015-04-12', maxDate, issueID))
+
+                    cursor.close()
+                    self.db.commit()
+
+            else:
+                messagebox.showwarning("Error!", "Cannot place an Extension!")            
+
+
+
+    
+
+
+        
+logWin = Tk()
+logWin.title("Login")
+
+regWin = Toplevel()
+regWin.title("New User Register")
+
+createWin = Toplevel()
+createWin.title("Create Profile")
+
+searchWin = Toplevel()
+searchWin.title("Search Books")
+
+extenWin = Toplevel()
+extenWin.title("Request Extension")
+
+futureWin = Toplevel()
+futureWin.title("Future Hold Request for a Book")
+
+trackWin = Toplevel()
+trackWin.title("Track Book Location")
+
+checkWin = Toplevel()
+checkWin.title("Book Checkout")
+
+returnWin = Toplevel()
+returnWin.title("Return Book")
+
+lostWin = Toplevel()
+lostWin.title("Lost/Damaged Book")
+
+holdWin = Toplevel()
+holdWin.title("Hold Request for a Book")
+
+damagedReport = Toplevel()
+damagedReport.title("Damaged Books Report")
+
+booksReport = Toplevel()
+booksReport.title("Popular Books Report")
+                  
+freqReport = Toplevel()
+freqReport.title("Frequent Users Report")
+
+subReport = Toplevel()
+subReport.title("Popular Subject Report")
+
+staffWin = Toplevel()
+
+studFacWin = Toplevel()
+
+
+                
+app = GUI(logWin, regWin, createWin, searchWin, extenWin, futureWin, trackWin, checkWin, returnWin, lostWin, holdWin, damagedReport, booksReport, freqReport, subReport, staffWin, studFacWin)
+
+logWin.mainloop()
+
